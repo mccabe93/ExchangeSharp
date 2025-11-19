@@ -295,6 +295,26 @@ namespace ExchangeSharp
 			return markets;
 		}
 
+		protected override async Task<IEnumerable<ExchangeOrderResult>> OnGetCompletedOrderDetailsAsync(string marketSymbol = null, DateTime? afterDate = null)
+		{
+			List<ExchangeOrderResult> orders = new List<ExchangeOrderResult>();
+			string url = "/orders/history/";
+			Dictionary<string, object> payload = await GetNoncePayloadAsync();
+			JToken token = await MakeJsonRequestAsync<JToken>(url, BaseUrl, payload, "POST");
+			foreach(var orderToken in token)
+			{
+				if (string.IsNullOrEmpty(marketSymbol) || orderToken["symbol"].ToStringInvariant() == marketSymbol)
+				{
+					ExchangeOrderResult order = ParseOrder(orderToken);
+					if (afterDate == null || order.OrderDate >= afterDate.Value)
+					{
+						orders.Add(order);
+					}
+				}
+			}
+			return orders;
+		}
+
 		protected override async Task<ExchangeTicker> OnGetTickerAsync(string marketSymbol)
 		{
 			JToken obj = await MakeJsonRequestAsync<JToken>("/pubticker/" + marketSymbol);
